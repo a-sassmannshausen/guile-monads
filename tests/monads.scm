@@ -23,6 +23,7 @@
 
 (define-module (test-monads)
   #:use-module (monads)
+  #:use-module (monads io)
   #:use-module (ice-9 match)
   #:use-module (rnrs io ports)
   #:use-module (srfi srfi-1)
@@ -32,11 +33,12 @@
 ;; Test the (monads) module.
 
 (define %monads
-  (list %identity-monad %state-monad))
+  (list %identity-monad %state-monad %io-monad))
 
 (define %monad-run
   (list identity
-        (cut run-with-state <> '())))
+        (cut run-with-state <> '())
+        run-io))
 
 (define-syntax-rule (values->list exp)
   (call-with-values (lambda () exp)
