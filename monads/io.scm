@@ -31,9 +31,15 @@
             io-output-port
             io-input-port
             io-error-port
+            io-close-input-port
+            io-close-output-port
+            io-close-error-port
             set-io-output-port
+            set-io-output-file
             set-io-input-port
+            set-io-input-file
             set-io-error-port
+            set-io-error-file
 
             %io-monad
             io-return
@@ -60,6 +66,8 @@
             iowrite-line
             iowrite
             iodisplay
+
+            iomkdir-p
 
             with-prompt))
 
@@ -137,6 +145,45 @@ previous input-port."
 previous error-port."
   (lambda (input-port output-port error-port)
     (delay (list error-port input-port output-port port))))
+
+(define (set-io-input-file filename)
+  "Set the input port within the io-monad context to the file pointed to by
+FILENAME, and return the previous input port."
+  (lambda (input-port output-port error-port)
+    (delay (list input-port (open-input-file filename) output-port error-port))))
+
+(define (io-close-input-port new-input-port)
+  "Set the input port within the io-monad context NEW-INPUT-PORT after closing
+the current input port."
+  (lambda (input-port output-port error-port)
+    (delay (begin (close-input-port input-port)
+                  (list '() new-input-port output-port error-port)))))
+
+(define (set-io-output-file filename)
+  "Set the output port within the io-monad context to the file pointed to by
+FILENAME, and return the previous output-port."
+  (lambda (input-port output-port error-port)
+    (delay (list output-port input-port (open-output-file filename) error-port))))
+
+(define (io-close-output-port new-output-port)
+  "Set the output port within the io-monad context to NEW-OUTPUT-PORT after
+closing the current output port."
+  (lambda (input-port output-port error-port)
+    (delay (begin (close-output-port output-port)
+                  (list '() input-port new-output-port error-port)))))
+
+(define (set-io-error-file filename)
+  "Set the error port within the io-monad context to the file pointed to by
+FILENAME, and return the previous error port."
+  (lambda (input-port output-port error-port)
+    (delay (list error-port input-port output-port (open-output-file filename)))))
+
+(define (io-close-error-port new-error-port)
+  "Set the error port within the io-monad context NEW-ERROR-PORT after closing
+the current error port."
+  (lambda (input-port output-port error-port)
+    (delay (begin (close-output-port error-port)
+                  (list '() input-port output-port new-error-port)))))
 
 (define (preserve-documentation original proc)
   "Return PROC with documentation taken from ORIGINAL."
@@ -285,6 +332,36 @@ we pass port as the first argument."
 (define iowrite (io-lift write 'output))
 
 (define iodisplay (io-lift display 'output))
+
+;;;;; Filesystem manipulation
+
+(define iomkdir-p
+  (io-lift
+   (lambda (dir ignored)
+     "Create directory DIR and all its ancestors as necessary."
+     (define absolute?
+       (string-prefix? "/" dir))
+
+     (define not-slash
+       (char-set-complement (char-set #\/)))
+
+     (let loop ((components (string-tokenize dir not-slash))
+                (root       (if absolute?
+                                ""
+                                ".")))
+       (match components
+         ((head tail ...)
+          (let ((path (string-append root "/" head)))
+            (catch 'system-error
+              (lambda ()
+                (mkdir path)
+                (loop tail path))
+              (lambda args
+                (if (= EEXIST (system-error-errno args))
+                    (loop tail path)
+                    (apply throw args))))))
+         (() #t))))
+   'output))
 
 ;;;;; Mixed
 
