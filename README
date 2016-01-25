@@ -1,0 +1,14 @@
+* Guile Monads
+
+  Guile Monads is a library providing a framework for using monads in Guile.
+  It was created by extracting the monad modules used in GNU Guix, written by
+  Ludovic Courtès.  The primary aim is to make that implementation of monads
+  available as a light-weight Guile module.
+
+  Additionally, Guile Monads currently provides an "io monad", which
+  facilitates purely functional input/output related programming.  Guile
+  itself of course allows direct use of input/output, and normally it is left
+  to the programmer interested in the functional style to use it responsibly.
+  The io monad provides a model through which the programmer can more clearly
+  think about how to maintain a referentially transparent program when using
+  input/output.
